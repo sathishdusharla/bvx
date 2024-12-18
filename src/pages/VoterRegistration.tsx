@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, EyeOff, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, UserPlus, Fingerprint } from 'lucide-react';
 import { motion } from 'framer-motion';
+import * as XLSX from 'xlsx';
 
 const VoterRegistration = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -13,9 +14,26 @@ const VoterRegistration = () => {
     idNumber: '',
     address: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    fingerprint: ''
   });
   const [message, setMessage] = useState<JSX.Element | string>('');
+  const [isCapturing, setIsCapturing] = useState(false);
+
+  const handleFingerprintCapture = async () => {
+    setIsCapturing(true);
+    try {
+      // WebAuthn fingerprint capture
+      const fingerprintData = await captureFingerprint();
+      setFormData({ ...formData, fingerprint: fingerprintData });
+      setMessage(<p style={{ color: 'green' }}>Fingerprint captured successfully.</p>);
+    } catch (error) {
+      console.log('Error capturing fingerprint:', error);
+      setMessage(<p style={{ color: 'red' }}>Failed to capture fingerprint. Please try again.</p>);
+    } finally {
+      setIsCapturing(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,9 +48,10 @@ const VoterRegistration = () => {
     data.append('address', formData.address);
     data.append('password', formData.password);
     data.append('confirmPassword', formData.confirmPassword);
+    data.append('fingerprint', formData.fingerprint);
 
     try {
-      const response = await fetch('https://script.google.com/macros/s/AKfycbz9QeeqI3Rpeo2a6igeqE8LU6419l80XdhYP9ic_YTFZa17m6rTy8Y8Lr615UdFG5hp/exec', {
+      const response = await fetch('https://script.google.com/macros/s/AKfycbwgqXwWxFQf4bR7Hj9lEWKPQG4O5fUN26FvYU3CcW4ufIh6Stp_5BLCX8xCrN7fGA-n/exec', {
         method: 'POST',
         body: data
       });
@@ -49,6 +68,20 @@ const VoterRegistration = () => {
       console.log('Error:', error);
       setMessage(<p style={{ color: 'red' }}>An error occurred. Please try again.</p>);
     }
+
+    // Store data in Excel sheet
+    storeDataInExcel(formData);
+  };
+
+  const storeDataInExcel = (data: any) => {
+    const workbook = XLSX.utils.book_new();
+    const worksheetData = [
+      ['Name', 'Mobile', 'Email', 'Age', 'ID Number', 'Address', 'Password', 'Fingerprint'],
+      [data.name, data.mobile, data.email, data.age, data.idNumber, data.address, data.password, data.fingerprint]
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Voter Data');
+    XLSX.writeFile(workbook, 'voter_data.xlsx');
   };
 
   return (
@@ -235,6 +268,23 @@ const VoterRegistration = () => {
               </motion.div>
             </div>
 
+            <motion.div
+              className="flex justify-center"
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <button
+                type="button"
+                onClick={handleFingerprintCapture}
+                className="inline-flex items-center space-x-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors duration-200"
+                disabled={isCapturing}
+              >
+                <Fingerprint className="w-5 h-5" />
+                <span>{isCapturing ? 'Capturing...' : 'Capture Fingerprint'}</span>
+              </button>
+            </motion.div>
+
             <motion.button
               type="submit"
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 rounded-md hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300"
@@ -273,3 +323,26 @@ const VoterRegistration = () => {
 };
 
 export default VoterRegistration;
+
+// WebAuthn function to capture fingerprint
+const captureFingerprint = async () => {
+  try {
+    const publicKey = {
+      challenge: new Uint8Array([0x8C, 0x7D, 0x6E, 0x5F, 0x4A, 0x3B, 0x2C, 0x1D]),
+      allowCredentials: [{
+        id: new Uint8Array([0x1A, 0x2B, 0x3C, 0x4D, 0x5E, 0x6F, 0x7D, 0x8C]),
+        type: 'public-key' as const,
+        transports: ['usb', 'nfc', 'ble', 'internal'] as AuthenticatorTransport[]
+      }],
+      timeout: 60000,
+      userVerification: 'required' as UserVerificationRequirement
+    };
+
+    const assertion = await navigator.credentials.get({ publicKey });
+    console.log('Authentication successful', assertion);
+    return 'fingerprint_data'; // Replace with actual fingerprint data
+  } catch (error) {
+    console.error('Authentication failed', error);
+    throw new Error('Fingerprint capture failed');
+  }
+};
