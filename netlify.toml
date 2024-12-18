@@ -1,8 +1,4 @@
-[build]
-  functions = "netlify-functions" # Folder containing serverless functions
-  publish = "build" # For React/Next.js static files
-
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  from = "/*"
+  to = "/index.html"
   status = 200
