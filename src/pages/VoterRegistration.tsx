@@ -222,7 +222,7 @@ const VoterRegistration = () => {
                 transition={{ duration: 0.5 }}
               >
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300">
-                  Confirm Password
+                  ConfirmPassword
                 </label>
                 <input
                   type="password"
