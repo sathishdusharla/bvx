@@ -1,4 +1,3 @@
-// src/pages/VoterDashboard.tsx
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Vote, Users } from 'lucide-react';
@@ -47,7 +46,7 @@ const VoterDashboard = () => {
   };
 
   const handleVoteClick = () => {
-    navigate('/voting');
+    navigate(`/voting?email=${encodeURIComponent(voterData.email)}&uniqueId=${encodeURIComponent(voterData.uniqueID)}`);
   };
 
   return (
