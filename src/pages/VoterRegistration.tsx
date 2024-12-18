@@ -4,6 +4,7 @@ import { Eye, EyeOff, UserPlus, Fingerprint } from 'lucide-react';
 import { motion } from 'framer-motion';
 import * as XLSX from 'xlsx';
 
+
 const VoterRegistration = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -37,6 +38,13 @@ const VoterRegistration = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate mobile number format
+    const mobilePattern = /^[0-9]{10}$/;
+    if (!mobilePattern.test(formData.mobile)) {
+      setMessage(<p style={{ color: 'red' }}>Invalid mobile number format. Please enter a 10-digit mobile number.</p>);
+      return;
+    }
 
     // Capture form data
     const data = new FormData();
@@ -329,18 +337,40 @@ const captureFingerprint = async () => {
   try {
     const publicKey = {
       challenge: new Uint8Array([0x8C, 0x7D, 0x6E, 0x5F, 0x4A, 0x3B, 0x2C, 0x1D]),
-      allowCredentials: [{
-        id: new Uint8Array([0x1A, 0x2B, 0x3C, 0x4D, 0x5E, 0x6F, 0x7D, 0x8C]),
-        type: 'public-key' as const,
-        transports: ['usb', 'nfc', 'ble', 'internal'] as AuthenticatorTransport[]
-      }],
+      rp: {
+        name: "Example Corp"
+      },
+      user: {
+        id: new Uint8Array(16),
+        name: "user@example.com",
+        displayName: "User"
+      },
+      pubKeyCredParams: [
+        {
+          type: "public-key" as PublicKeyCredentialType,
+          alg: -7
+        }
+      ],
       timeout: 60000,
-      userVerification: 'required' as UserVerificationRequirement
+      attestation: "direct" as AttestationConveyancePreference,
+      authenticatorSelection: {
+        authenticatorAttachment: "platform" as AuthenticatorAttachment,
+        userVerification: "required" as UserVerificationRequirement
+      }
     };
 
-    const assertion = await navigator.credentials.get({ publicKey });
-    console.log('Authentication successful', assertion);
-    return 'fingerprint_data'; // Replace with actual fingerprint data
+    const credential = await navigator.credentials.create({ publicKey });
+    console.log('Authentication successful', credential);
+    const credentialData = {
+      id: credential?.id || '',
+      type: credential?.type || '',
+      rawId: Array.from(new Uint8Array((credential as PublicKeyCredential)?.rawId || [])),
+      response: {
+        clientDataJSON: Array.from(new Uint8Array((credential as PublicKeyCredential).response.clientDataJSON || [])),
+        attestationObject: Array.from(new Uint8Array(((credential as PublicKeyCredential).response as AuthenticatorAttestationResponse).attestationObject || new ArrayBuffer(0)))
+      }
+    };
+    return JSON.stringify(credentialData); // Replace with actual fingerprint data
   } catch (error) {
     console.error('Authentication failed', error);
     throw new Error('Fingerprint capture failed');
