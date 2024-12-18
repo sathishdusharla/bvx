@@ -63,7 +63,7 @@ const Results = () => {
   }
 
   const totalVotes = results.reduce((acc, curr) => acc + curr.votes, 0);
-  const winner = [...results].sort((a, b) => b.votes - a.votes)[0];
+  const winner = results.length > 0 ? results.reduce((prev, current) => (prev.votes > current.votes) ? prev : current) : null;
 
   const chartData = {
     labels: results.map(r => r.candidate),
@@ -151,9 +151,11 @@ const Results = () => {
     });
   
     // Winner
-    const winner = results.sort((a, b) => b.votes - a.votes)[0];
-    doc.setFontSize(14);
-    doc.text(`Winner: ${winner.candidate} (${winner.party})`, 105, (doc as any).lastAutoTable.finalY + 10, { align: 'center' });
+    const winner = results.length > 0 ? results.reduce((prev, current) => (prev.votes > current.votes) ? prev : current) : null;
+    if (winner) {
+      doc.setFontSize(14);
+      doc.text(`Winner: ${winner.candidate} (${winner.party})`, 105, (doc as any).lastAutoTable.finalY + 10, { align: 'center' });
+    }
   
     // Voter count
     const totalVotes = results.reduce((acc, curr) => acc + curr.votes, 0);
@@ -191,15 +193,17 @@ const Results = () => {
               <Trophy className="w-8 h-8 text-yellow-500" />
               <h2 className="text-2xl font-bold text-white">Winner</h2>
             </div>
-            <div className="text-center">
-              <h3 className="text-xl font-semibold text-white mb-2">
-                {winner.candidate}
-              </h3>
-              <p className="text-gray-400 mb-4">{winner.party}</p>
-              <div className="text-3xl font-bold text-blue-500 mb-6">
-                {winner.votes} votes
+            {winner && (
+              <div className="text-center">
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  {winner.candidate}
+                </h3>
+                <p className="text-gray-400 mb-4">{winner.party}</p>
+                <div className="text-3xl font-bold text-blue-500 mb-6">
+                  {winner.votes} votes
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -232,7 +236,7 @@ const Results = () => {
                     <td className="py-3 text-gray-400">{result.party}</td>
                     <td className="py-3 text-right text-white">{result.votes}</td>
                     <td className="py-3 text-right text-gray-400">
-                      {((result.votes / totalVotes) * 100).toFixed(1)}%
+                      {totalVotes > 0 ? ((result.votes / totalVotes) * 100).toFixed(1) : '0.0'}%
                     </td>
                   </tr>
                 ))}
